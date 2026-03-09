@@ -236,6 +236,48 @@
             margin-top: 20px;
         }
 
+        .start-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .start-screen.hidden {
+            display: none;
+        }
+
+        .start-screen-content {
+            background: #222;
+            padding: 40px;
+            border-radius: 10px;
+            text-align: center;
+            border: 3px solid #667eea;
+        }
+
+        .start-screen-content h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+
+        .start-screen-content p {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #ddd;
+        }
+
+        .start-screen-content button {
+            width: 200px;
+            margin-top: 30px;
+        }
+
         @media (max-width: 768px) {
             .container {
                 flex-direction: column;
@@ -249,6 +291,14 @@
     </style>
 </head>
 <body>
+    <div class="start-screen" id="startScreen">
+        <div class="start-screen-content">
+            <h1>TETRIS</h1>
+            <p>Classic block-dropping puzzle</p>
+            <button id="startBtn">Start Game</button>
+        </div>
+    </div>
+
     <div class="container">
         <div class="game-area">
             <canvas id="gameCanvas" width="200" height="400"></canvas>
@@ -333,6 +383,7 @@
         let level = 1;
         let gameOver = false;
         let isPaused = false;
+        let gameStarted = false;
         let highScores = loadHighScores();
         let highScore = highScores[0]?.score || 0;
 
@@ -354,6 +405,7 @@
             level = 1;
             gameOver = false;
             isPaused = false;
+            gameStarted = true;
             dropCounter = 0;
             dropInterval = getDropInterval();
             updateScore();
@@ -459,7 +511,7 @@
         }
 
         function update(deltaTime) {
-            if (gameOver || isPaused) return;
+            if (!gameStarted || gameOver || isPaused) return;
 
             dropCounter += deltaTime;
 
@@ -591,7 +643,10 @@
         }
 
         function saveHighScore(newScore) {
-            highScores.push({ score: newScore, date: new Date().toLocaleDateString() });
+            // Check if this exact score already exists
+            if (!highScores.some(entry => entry.score === newScore)) {
+                highScores.push({ score: newScore, date: new Date().toLocaleDateString() });
+            }
             highScores.sort((a, b) => b.score - a.score);
             highScores = highScores.slice(0, 10); // Keep top 10
             localStorage.setItem('tetrisHighScores', JSON.stringify(highScores));
@@ -627,7 +682,7 @@
 
         // Event listeners
         document.addEventListener('keydown', (e) => {
-            if (gameOver || isPaused) {
+            if (!gameStarted || gameOver || isPaused) {
                 if (e.key === 'p' || e.key === 'P') {
                     isPaused = !isPaused;
                     document.getElementById('pauseBtn').textContent = isPaused ? 'Resume' : 'Pause';
@@ -666,8 +721,13 @@
             }
         });
 
+        document.getElementById('startBtn').addEventListener('click', () => {
+            document.getElementById('startScreen').classList.add('hidden');
+            init();
+        });
+
         document.getElementById('pauseBtn').addEventListener('click', () => {
-            if (!gameOver) {
+            if (gameStarted && !gameOver) {
                 isPaused = !isPaused;
                 document.getElementById('pauseBtn').textContent = isPaused ? 'Resume' : 'Pause';
             }
@@ -675,7 +735,8 @@
 
         document.getElementById('resetBtn').addEventListener('click', () => {
             document.getElementById('gameOverScreen').classList.remove('show');
-            init();
+            document.getElementById('startScreen').classList.remove('hidden');
+            gameStarted = false;
         });
 
         // Game loop
@@ -689,8 +750,7 @@
             requestAnimationFrame(gameLoop);
         }
 
-        // Start game
-        init();
+        // Load high scores and start loop
         renderHighScores();
         requestAnimationFrame(gameLoop);
     </script>
